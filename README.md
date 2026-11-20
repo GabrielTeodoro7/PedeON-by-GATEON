@@ -26,6 +26,8 @@ O checkout chama uma função SQL que calcula os preços a partir do banco, evit
 - **Meus queridinhos:** clientes autenticados podem salvar produtos favoritos, persistidos no Supabase com RLS individual.
 - **Recadinho da casa:** cada restaurante pode personalizar uma mensagem de boas-vindas exibida no cardápio.
 - **Filtro de favoritos:** o cliente alterna entre todo o cardápio e os produtos salvos.
+- **Clube do Carinho:** contabiliza corações simbólicos por reais inteiros gastos em pedidos entregues; sem resgate ou valor monetário.
+- **Mural de carinho:** clientes avaliam pedidos entregues com 1 a 5 estrelas e recados; o restaurante vê o feedback no painel.
 
 ## Banco de dados
 
