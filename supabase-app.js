@@ -3,7 +3,7 @@ const supabase=createClient('https://lutemrmbswbcxiznfhny.supabase.co','sb_publi
 const $=id=>document.getElementById(id);
 const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const money=c=>(Number(c)/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-let session=null,restaurantId=null,restaurants=[],products=[],cart={};
+let session=null,restaurantId=null,restaurants=[],products=[],cart={},favoriteIds=new Set(),onlyFavorites=false;
 const show=(id,yes)=>$(id).classList.toggle('hidden',!yes);
 function notice(msg,error=false){$('message').className=error?'err':'muted';$('message').textContent=msg;window.scrollTo({top:0,behavior:'smooth'})}
 async function call(p){const {data,error}=await p;if(error)throw error;return data}
@@ -14,14 +14,53 @@ supabase.auth.onAuthStateChange(()=>{setTimeout(refresh,0)});
 async function loadMine(){try{const memberships=await call(supabase.from('restaurant_members').select('restaurant_id,role'));const ids=memberships.map(m=>m.restaurant_id);const mine=ids.length?await call(supabase.from('restaurants').select('id,name,slug').in('id',ids)):[];$('myRestaurants').innerHTML=mine.length?mine.map(r=>'<button class="secondary-action" data-manage="'+safe(r.id)+'">'+safe(r.name)+'</button>').join(' '):'<p class="muted">Você ainda não possui restaurante.</p>';if(restaurantId&&!ids.includes(restaurantId)){restaurantId=null;show('manageSection',false)}else if(restaurantId)await loadManage()}catch(err){notice(err.message,true)}}
 $('restaurantForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);try{const id=await call(supabase.rpc('create_restaurant',{p_name:f.get('name'),p_slug:f.get('slug')}));restaurantId=id;e.target.reset();notice('Restaurante criado!');await loadMine();await loadShop()}catch(err){notice(err.message,true)}};
 $('myRestaurants').onclick=e=>{const b=e.target.closest('[data-manage]');if(b){restaurantId=b.dataset.manage;show('manageSection',true);loadManage()}};
-async function loadManage(){if(!restaurantId)return;try{const [r,c,p,o]=await Promise.all([call(supabase.from('restaurants').select('name').eq('id',restaurantId).single()),call(supabase.from('categories').select('id,name').eq('restaurant_id',restaurantId).order('sort_order')),call(supabase.from('products').select('id,name,price_cents,available').eq('restaurant_id',restaurantId).order('created_at',{ascending:false})),call(supabase.from('orders').select('id,customer_name,status,total_cents,created_at').eq('restaurant_id',restaurantId).order('created_at',{ascending:false}).limit(60))]);show('manageSection',true);$('manageTitle').textContent='Gerenciar '+r.name;$('productCategory').innerHTML=c.map(x=>'<option value="'+safe(x.id)+'">'+safe(x.name)+'</option>').join('');$('ownProducts').innerHTML=p.length?p.map(x=>'<div class="item"><b>'+safe(x.name)+'</b><p>'+money(x.price_cents)+'</p><span>'+ (x.available?'Disponível':'Indisponível')+'</span></div>').join(''):'<p>Nenhum produto cadastrado.</p>';$('ownOrders').innerHTML=o.length?'<table><thead><tr><th>Pedido</th><th>Cliente</th><th>Total</th><th>Status</th><th>Ação</th></tr></thead><tbody>'+o.map(x=>'<tr><td>'+safe(x.id.slice(0,8))+'</td><td>'+safe(x.customer_name)+'</td><td>'+money(x.total_cents)+'</td><td>'+safe(x.status)+'</td><td><select data-order="'+safe(x.id)+'">'+[x.status,...({pending:['accepted','cancelled'],accepted:['preparing','cancelled'],preparing:['ready','cancelled'],ready:['dispatched'],dispatched:['delivered']}[x.status]||[])].map(s=>'<option '+(x.status===s?'selected':'')+' value="'+s+'">'+s+'</option>').join('')+'</select></td></tr>').join('')+'</tbody></table>':'<p>Nenhum pedido recebido.</p>'}catch(err){notice(err.message,true)}}
+async function loadManage(){if(!restaurantId)return;try{const [r,c,p,o]=await Promise.all([call(supabase.from('restaurants').select('name,welcome_message').eq('id',restaurantId).single()),call(supabase.from('categories').select('id,name').eq('restaurant_id',restaurantId).order('sort_order')),call(supabase.from('products').select('id,name,price_cents,available').eq('restaurant_id',restaurantId).order('created_at',{ascending:false})),call(supabase.from('orders').select('id,customer_name,status,total_cents,created_at').eq('restaurant_id',restaurantId).order('created_at',{ascending:false}).limit(60))]);show('manageSection',true);$('manageTitle').textContent='Gerenciar '+r.name;$('welcomeInput').value=r.welcome_message||'';$('productCategory').innerHTML=c.map(x=>'<option value="'+safe(x.id)+'">'+safe(x.name)+'</option>').join('');$('ownProducts').innerHTML=p.length?p.map(x=>'<div class="item"><b>'+safe(x.name)+'</b><p>'+money(x.price_cents)+'</p><span>'+ (x.available?'Disponível':'Indisponível')+'</span></div>').join(''):'<p>Nenhum produto cadastrado.</p>';$('ownOrders').innerHTML=o.length?'<table><thead><tr><th>Pedido</th><th>Cliente</th><th>Total</th><th>Status</th><th>Ação</th></tr></thead><tbody>'+o.map(x=>'<tr><td>'+safe(x.id.slice(0,8))+'</td><td>'+safe(x.customer_name)+'</td><td>'+money(x.total_cents)+'</td><td>'+safe(x.status)+'</td><td><select data-order="'+safe(x.id)+'">'+[x.status,...({pending:['accepted','cancelled'],accepted:['preparing','cancelled'],preparing:['ready','cancelled'],ready:['dispatched'],dispatched:['delivered']}[x.status]||[])].map(s=>'<option '+(x.status===s?'selected':'')+' value="'+s+'">'+s+'</option>').join('')+'</select></td></tr>').join('')+'</tbody></table>':'<p>Nenhum pedido recebido.</p>'}catch(err){notice(err.message,true)}}
+$('welcomeForm').onsubmit=async e=>{e.preventDefault();if(!restaurantId)return;try{const value=String(new FormData(e.target).get('welcome')||'').trim();if(!value||value.length>180)throw Error('Escreva um recadinho de até 180 caracteres.');await call(supabase.from('restaurants').update({welcome_message:value}).eq('id',restaurantId));await loadShop();notice('Recadinho salvo! 💌')}catch(err){notice(err.message,true)}};
 $('categoryForm').onsubmit=async e=>{e.preventDefault();try{await call(supabase.from('categories').insert({restaurant_id:restaurantId,name:new FormData(e.target).get('name')}));e.target.reset();await loadManage();notice('Categoria criada!')}catch(err){notice(err.message,true)}};
 $('productForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);try{await call(supabase.from('products').insert({restaurant_id:restaurantId,category_id:f.get('category'),name:f.get('name'),description:f.get('description'),price_cents:Math.round(Number(f.get('price'))*100)}));e.target.reset();await loadManage();await loadShop();notice('Produto publicado!')}catch(err){notice(err.message,true)}};
 $('ownOrders').onchange=async e=>{const id=e.target.dataset.order;if(!id)return;try{await call(supabase.rpc('advance_order',{p_order:id,p_status:e.target.value}));await loadManage();await loadHistory();notice('Pedido atualizado!')}catch(err){notice(err.message,true)}};
-async function loadShop(){try{restaurants=await call(supabase.from('restaurants').select('id,name,slug').eq('active',true).order('name'));const current=$('shopRestaurant').value;$('shopRestaurant').innerHTML='<option value="">Selecione um restaurante</option>'+restaurants.map(r=>'<option value="'+safe(r.id)+'">'+safe(r.name)+'</option>').join('');if(restaurants.some(r=>r.id===current))$('shopRestaurant').value=current;await loadProducts()}catch(err){notice(err.message,true)}}
-$('shopRestaurant').onchange=()=>{cart={};loadProducts()};
-async function loadProducts(){const id=$('shopRestaurant').value;products=id?await call(supabase.from('products').select('id,name,description,price_cents').eq('restaurant_id',id).eq('available',true).order('name')):[];$('shopProducts').innerHTML=products.length?products.map(p=>'<article class="item"><h3>🍔 '+safe(p.name)+'</h3><p>'+safe(p.description)+'</p><b>'+money(p.price_cents)+'</b><p><button class="action" data-add="'+safe(p.id)+'">Adicionar +</button></p></article>').join(''):'<p class="muted">Selecione um restaurante com produtos disponíveis.</p>';drawCart()}
-$('shopProducts').onclick=e=>{const b=e.target.closest('[data-add]');if(b){const id=b.dataset.add;cart[id]=(cart[id]||0)+1;drawCart()}};
+async function loadShop(){try{restaurants=await call(supabase.from('restaurants').select('id,name,slug,welcome_message').eq('active',true).order('name'));const current=$('shopRestaurant').value;$('shopRestaurant').innerHTML='<option value="">Selecione um restaurante</option>'+restaurants.map(r=>'<option value="'+safe(r.id)+'">'+safe(r.name)+'</option>').join('');if(restaurants.some(r=>r.id===current))$('shopRestaurant').value=current;await loadProducts()}catch(err){notice(err.message,true)}}
+$('shopRestaurant').onchange=()=>{cart={};onlyFavorites=false;loadProducts()};
+$('showAllProducts').onclick=()=>{onlyFavorites=false;renderShopProducts()};
+$('showFavorites').onclick=()=>{if(!session){notice('Entre na sua conta para salvar e ver seus queridinhos. 💗',true);return}onlyFavorites=true;renderShopProducts()};
+async function loadFavorites(){
+ favoriteIds=new Set();
+ if(!session||!products.length)return;
+ const ids=products.map(p=>p.id);
+ const rows=await call(supabase.from('product_favorites').select('product_id').in('product_id',ids));
+ favoriteIds=new Set(rows.map(x=>x.product_id));
+}
+function renderShopProducts(){
+ const selected=restaurants.find(r=>r.id===$('shopRestaurant').value);
+ $('shopWelcome').textContent=selected?'💌 '+(selected.welcome_message||'Feito com carinho, especialmente para você! 💛'):'';
+ show('shopWelcome',!!selected);
+ const list=onlyFavorites?products.filter(p=>favoriteIds.has(p.id)):products;
+ $('shopProducts').innerHTML=list.length?list.map(p=>'<article class="item"><h3>🍔 '+safe(p.name)+'</h3><p>'+safe(p.description)+'</p><b>'+money(p.price_cents)+'</b><div class="row" style="margin-top:12px"><button class="action" data-add="'+safe(p.id)+'">Adicionar +</button><button class="heart '+(favoriteIds.has(p.id)?'saved':'')+'" data-favorite="'+safe(p.id)+'" aria-label="'+(favoriteIds.has(p.id)?'Remover dos favoritos':'Salvar nos favoritos')+'">'+(favoriteIds.has(p.id)?'💖 Salvo':'🤍 Favoritar')+'</button></div></article>').join(''):'<p class="muted">'+(onlyFavorites?'Seus queridinhos vão aparecer aqui! 💗':'Selecione um restaurante com produtos disponíveis.')+'</p>';
+ drawCart();
+}
+async function loadProducts(){
+ const id=$('shopRestaurant').value;
+ try{
+  products=id?await call(supabase.from('products').select('id,name,description,price_cents').eq('restaurant_id',id).eq('available',true).order('name')):[];
+  await loadFavorites();
+  renderShopProducts();
+ }catch(err){notice(err.message,true)}
+}
+$('shopProducts').onclick=e=>{const b=e.target.closest('[data-add]');if(b){const id=b.dataset.add;cart[id]=(cart[id]||0)+1;drawCart();return}const heart=e.target.closest('[data-favorite]');if(heart)toggleFavorite(heart.dataset.favorite)};
+async function toggleFavorite(id){
+ if(!session){notice('Faça login para guardar seus queridinhos. 💗',true);return}
+ if(!products.some(p=>p.id===id))return;
+ try{
+  if(favoriteIds.has(id)){
+   await call(supabase.from('product_favorites').delete().eq('user_id',session.user.id).eq('product_id',id));
+   favoriteIds.delete(id);
+  }else{
+   await call(supabase.from('product_favorites').insert({user_id:session.user.id,product_id:id}));
+   favoriteIds.add(id);
+  }
+  renderShopProducts();
+ }catch(err){notice(err.message,true)}
+}
 function drawCart(){const entries=Object.entries(cart).filter(([id,q])=>q>0&&products.some(p=>p.id===id));const total=entries.reduce((n,[id,q])=>n+products.find(p=>p.id===id).price_cents*q,0);$('cartBox').innerHTML=entries.length?'<h3>🛒 Carrinho</h3>'+entries.map(([id,q])=>'<p>'+safe(products.find(p=>p.id===id).name)+' × '+q+' <button class="secondary-action" data-remove="'+safe(id)+'">−</button></p>').join('')+'<strong>Total: '+money(total)+'</strong>':'<p class="muted">Carrinho vazio.</p>';show('orderForm',entries.length>0)}
 $('cartBox').onclick=e=>{const b=e.target.closest('[data-remove]');if(b){cart[b.dataset.remove]--;drawCart()}};
 $('fulfillment').onchange=()=>{$('deliveryAddress').required=$('fulfillment').value==='delivery'};
