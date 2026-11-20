@@ -19,6 +19,7 @@ const active=o.filter(x=>!['delivered','cancelled'].includes(x.status)).length;
 const completed=o.filter(x=>x.status==='delivered');
 const revenue=completed.reduce((sum,x)=>sum+Number(x.total_cents||0),0);
 const pending=o.filter(x=>x.status==='pending').length;
+$('insightsSummary').textContent='Taxa de entrega entre os últimos '+o.length+' pedidos: '+(o.length?(completed.length/o.length*100).toFixed(1):'0')+'%. Indicadores operacionais, não representam lucro ou faturamento contábil.';
 $('pulseMetrics').innerHTML=[
  ['Pedidos recentes',o.length,'📦'],
  ['Em andamento',active,'⚡'],
@@ -118,7 +119,7 @@ async function loadHistory(){
  try{
   const orders=await call(supabase.from('orders').select('id,restaurant_id,status,total_cents,created_at,restaurants(name)').eq('customer_id',session.user.id).order('created_at',{ascending:false}).limit(30));
   const points=await call(supabase.rpc('my_heart_points'));
-  $('heartPoints').textContent=Number(points||0).toLocaleString('pt-BR');
+  $('heartPoints').textContent=Number(points||0).toLocaleString('pt-BR');const score=Number(points||0);$('rewardLevel').textContent='ON Levels: '+(score>=5000?'Black':score>=2000?'Gold':score>=500?'Silver':'Bronze')+' · Classificação demonstrativa';
   const delivered=orders.filter(o=>o.status==='delivered').map(o=>o.id);
   const previous=delivered.length?await call(supabase.from('order_reviews').select('order_id').in('order_id',delivered)):[];
   const reviewed=new Set(previous.map(x=>x.order_id));
