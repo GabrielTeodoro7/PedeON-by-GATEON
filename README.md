@@ -21,6 +21,12 @@ O frontend usa a **chave publicável** do projeto Supabase (segura para uso púb
 
 O checkout chama uma função SQL que calcula os preços a partir do banco, evitando confiar nos valores enviados pelo navegador. Cada restaurante possui ID próprio, relacionamentos e políticas de segurança por usuário.
 
+## Novidades criativas 💗
+
+- **Meus queridinhos:** clientes autenticados podem salvar produtos favoritos, persistidos no Supabase com RLS individual.
+- **Recadinho da casa:** cada restaurante pode personalizar uma mensagem de boas-vindas exibida no cardápio.
+- **Filtro de favoritos:** o cliente alterna entre todo o cardápio e os produtos salvos.
+
 ## Banco de dados
 
 Projeto Supabase: `PedeON-by-GATEON`. Tabelas: `restaurants`, `restaurant_members`, `categories`, `products`, `orders`, `order_items`. Migrações aplicadas diretamente no projeto hospedado.
