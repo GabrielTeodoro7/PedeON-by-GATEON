@@ -1,26 +1,34 @@
 # 🍔 PedeON by GATEON
 
-Plataforma de pedidos e gestão para restaurantes. **Primeira entrega: protótipo front-end funcional**, com quatro experiências: consumidor, restaurante, entregador e administração central.
+Plataforma de pedidos para restaurantes. O repositório contém **duas experiências distintas**:
 
-## Executar localmente
-Abra `index.html` no navegador ou execute `python -m http.server 5500` e acesse http://localhost:5500.
+- **`index.html`**: protótipo demonstrativo de consumidor, restaurante, entregador e GATEON, com dados apenas no navegador (`localStorage`).
+- **`painel.html`**: MVP conectado ao **Supabase**, com autenticação, cadastro de restaurantes, categorias, produtos, pedidos e alteração de status.
 
-## Funcionalidades implementadas
-- Cardápio público com busca, categorias e carrinho
-- Checkout demonstrativo com nome, endereço e forma de pagamento
-- Restaurante: aceitar, preparar e liberar pedidos
-- Entregador: aceitar corrida, retirar e concluir entrega
-- GATEON: KPIs e monitoramento dos pedidos
-- Persistência local via `localStorage`; layout responsivo
+## Acessar
 
-## Atenção
-**Protótipo demonstrativo, não SaaS pronto para produção.** Não há autenticação, banco de dados remoto, pagamentos reais, WhatsApp, GPS ou integrações logísticas. Dados permanecem no mesmo navegador. Não utilize dados reais de clientes.
+Abra `painel.html` pelo servidor estático (ex.: `python -m http.server 5500`) e acesse `http://localhost:5500/painel.html`. Também há um link no topo da página inicial.
 
-## Roadmap
-1. API multiempresa, PostgreSQL, migrações e isolamento por tenant
-2. Login seguro, permissões e auditoria
-3. Pedidos transacionais, estoque, financeiro e testes
-4. WhatsApp oficial, gateway de pagamentos e logística contratada
-5. Deploy, observabilidade, backups e conformidade LGPD
+O frontend usa a **chave publicável** do projeto Supabase (segura para uso público com RLS). **Nunca inclua a chave secreta/service_role no frontend**.
 
-**Identidade:** vermelho, laranja, verde e branco. **Produto:** PedeON. **Empresa:** GATEON.
+## Fluxo conectado
+
+1. Criar conta com e-mail e senha; confirmar e-mail se solicitado.
+2. Criar restaurante e escolher slug exclusivo.
+3. Adicionar categoria e produtos com preço.
+4. Na área de pedidos, selecionar o restaurante, adicionar produtos e confirmar com uma conta autenticada.
+5. No painel do restaurante, consultar pedidos e atualizar o status.
+
+O checkout chama uma função SQL que calcula os preços a partir do banco, evitando confiar nos valores enviados pelo navegador. Cada restaurante possui ID próprio, relacionamentos e políticas de segurança por usuário.
+
+## Banco de dados
+
+Projeto Supabase: `PedeON-by-GATEON`. Tabelas: `restaurants`, `restaurant_members`, `categories`, `products`, `orders`, `order_items`. Migrações aplicadas diretamente no projeto hospedado.
+
+## Importante: limites atuais
+
+**Este é um MVP inicial, não um SaaS pronto para produção.** O protótipo em `index.html` não usa o banco remoto; use `painel.html` para o fluxo conectado. Ainda faltam pagamentos reais, frete, logística de motoboys, WhatsApp/IA, assinaturas, relatórios financeiros, estoque, mesas, GATEON superadmin, testes automatizados e deploy configurado. Não há processamento de pagamentos ou envio de entregas reais. Antes de uso comercial, implementar auditoria, rate limiting, antifraude, permissões detalhadas, LGPD e testes end-to-end.
+
+## Tecnologias
+
+HTML, CSS, JavaScript, Supabase JS 2.x, Supabase Auth, PostgreSQL e Row Level Security.
