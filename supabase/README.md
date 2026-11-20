@@ -4,7 +4,7 @@ Projeto hospedado: `lutemrmbswbcxiznfhny`.
 
 ## Estado atual
 
-O banco remoto possui **seis migrações já aplicadas**. Este diretório contém apenas as duas migrações mais recentes de endurecimento de segurança.
+O banco remoto possui **seis migrações já aplicadas**. Este diretório contém migrações recentes de segurança e personalização, mas ainda não contém todo o histórico inicial.
 
 **Atenção:** antes de habilitar GitHub Integration ou executar `supabase db push`, é obrigatório recuperar e versionar as quatro migrações anteriores no mesmo histórico, ou executar uma reconciliação supervisionada com o Supabase CLI. **Não rode db reset nem aplique estas migrações isoladamente em um banco vazio.**
 
@@ -17,5 +17,6 @@ Migrações anteriores no banco:
 Migrações versionadas aqui:
 - 20261120231408_enforce_order_status_transitions
 - 20261120231419_restrict_order_mutations_to_validated_rpcs
+- 20261120231609_customer_favorites_and_restaurant_welcome_messages
 
 Nunca faça commit de service_role, secret keys, senhas ou connection strings com senha.
