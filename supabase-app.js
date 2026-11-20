@@ -14,18 +14,30 @@ supabase.auth.onAuthStateChange(()=>{setTimeout(refresh,0)});
 async function loadMine(){try{const memberships=await call(supabase.from('restaurant_members').select('restaurant_id,role'));const ids=memberships.map(m=>m.restaurant_id);const mine=ids.length?await call(supabase.from('restaurants').select('id,name,slug').in('id',ids)):[];$('myRestaurants').innerHTML=mine.length?mine.map(r=>'<button class="secondary-action" data-manage="'+safe(r.id)+'">'+safe(r.name)+'</button>').join(' '):'<p class="muted">Você ainda não possui restaurante.</p>';if(restaurantId&&!ids.includes(restaurantId)){restaurantId=null;show('manageSection',false)}else if(restaurantId)await loadManage()}catch(err){notice(err.message,true)}}
 $('restaurantForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);try{const id=await call(supabase.rpc('create_restaurant',{p_name:f.get('name'),p_slug:f.get('slug')}));restaurantId=id;e.target.reset();notice('Restaurante criado!');await loadMine();await loadShop()}catch(err){notice(err.message,true)}};
 $('myRestaurants').onclick=e=>{const b=e.target.closest('[data-manage]');if(b){restaurantId=b.dataset.manage;show('manageSection',true);loadManage()}};
-async function loadManage(){if(!restaurantId)return;try{const [r,c,p,o]=await Promise.all([call(supabase.from('restaurants').select('name,welcome_message').eq('id',restaurantId).single()),call(supabase.from('categories').select('id,name').eq('restaurant_id',restaurantId).order('sort_order')),call(supabase.from('products').select('id,name,price_cents,available').eq('restaurant_id',restaurantId).order('created_at',{ascending:false})),call(supabase.from('orders').select('id,customer_name,status,total_cents,created_at').eq('restaurant_id',restaurantId).order('created_at',{ascending:false}).limit(60))]);show('manageSection',true);$('manageTitle').textContent='Gerenciar '+r.name;$('welcomeInput').value=r.welcome_message||'';$('productCategory').innerHTML=c.map(x=>'<option value="'+safe(x.id)+'">'+safe(x.name)+'</option>').join('');$('ownProducts').innerHTML=p.length?p.map(x=>'<div class="item"><b>'+safe(x.name)+'</b><p>'+money(x.price_cents)+'</p><span>'+ (x.available?'Disponível':'Indisponível')+'</span></div>').join(''):'<p>Nenhum produto cadastrado.</p>';$('ownOrders').innerHTML=o.length?'<table><thead><tr><th>Pedido</th><th>Cliente</th><th>Total</th><th>Status</th><th>Ação</th></tr></thead><tbody>'+o.map(x=>'<tr><td>'+safe(x.id.slice(0,8))+'</td><td>'+safe(x.customer_name)+'</td><td>'+money(x.total_cents)+'</td><td>'+safe(x.status)+'</td><td><select data-order="'+safe(x.id)+'">'+[x.status,...({pending:['accepted','cancelled'],accepted:['preparing','cancelled'],preparing:['ready','cancelled'],ready:['dispatched'],dispatched:['delivered']}[x.status]||[])].map(s=>'<option '+(x.status===s?'selected':'')+' value="'+s+'">'+s+'</option>').join('')+'</select></td></tr>').join('')+'</tbody></table>':'<p>Nenhum pedido recebido.</p>';
+async function loadManage(){if(!restaurantId)return;try{const [r,c,p,o]=await Promise.all([call(supabase.from('restaurants').select('name,welcome_message').eq('id',restaurantId).single()),call(supabase.from('categories').select('id,name').eq('restaurant_id',restaurantId).order('sort_order')),call(supabase.from('products').select('id,name,price_cents,available').eq('restaurant_id',restaurantId).order('created_at',{ascending:false})),call(supabase.from('orders').select('id,customer_name,status,total_cents,created_at').eq('restaurant_id',restaurantId).order('created_at',{ascending:false}).limit(60))]);show('manageSection',true);
+const active=o.filter(x=>!['delivered','cancelled'].includes(x.status)).length;
+const completed=o.filter(x=>x.status==='delivered');
+const revenue=completed.reduce((sum,x)=>sum+Number(x.total_cents||0),0);
+const pending=o.filter(x=>x.status==='pending').length;
+$('pulseMetrics').innerHTML=[
+ ['Pedidos recentes',o.length,'📦'],
+ ['Em andamento',active,'⚡'],
+ ['Aguardando aceite',pending,'⏳'],
+ ['Entregues',completed.length,'✅'],
+ ['Receita dos entregues',money(revenue),'📈']
+].map(([label,value,emoji])=>'<article class="item"><span>'+emoji+' '+label+'</span><h3>'+value+'</h3></article>').join('');
+$('manageTitle').textContent='Gerenciar '+r.name;$('welcomeInput').value=r.welcome_message||'';$('productCategory').innerHTML=c.map(x=>'<option value="'+safe(x.id)+'">'+safe(x.name)+'</option>').join('');$('ownProducts').innerHTML=p.length?p.map(x=>'<div class="item"><b>'+safe(x.name)+'</b><p>'+money(x.price_cents)+'</p><span>'+ (x.available?'Disponível':'Indisponível')+'</span></div>').join(''):'<p>Nenhum produto cadastrado.</p>';$('ownOrders').innerHTML=o.length?'<table><thead><tr><th>Pedido</th><th>Cliente</th><th>Total</th><th>Status</th><th>Ação</th></tr></thead><tbody>'+o.map(x=>'<tr><td>'+safe(x.id.slice(0,8))+'</td><td>'+safe(x.customer_name)+'</td><td>'+money(x.total_cents)+'</td><td>'+safe(x.status)+'</td><td><select data-order="'+safe(x.id)+'">'+[x.status,...({pending:['accepted','cancelled'],accepted:['preparing','cancelled'],preparing:['ready','cancelled'],ready:['dispatched'],dispatched:['delivered']}[x.status]||[])].map(s=>'<option '+(x.status===s?'selected':'')+' value="'+s+'">'+s+'</option>').join('')+'</select></td></tr>').join('')+'</tbody></table>':'<p>Nenhum pedido recebido.</p>';
 const reviews=await call(supabase.from('order_reviews').select('rating,message,created_at').eq('restaurant_id',restaurantId).order('created_at',{ascending:false}).limit(30));
-$('restaurantReviews').innerHTML=reviews.length?reviews.map(v=>'<article class="item"><strong>'+('⭐'.repeat(v.rating))+'</strong><p>'+safe(v.message||'Avaliação sem recado')+'</p><small class="muted">'+new Date(v.created_at).toLocaleDateString('pt-BR')+'</small></article>').join(''):'<p class="muted">Os primeiros recadinhos aparecerão aqui! 💛</p>';
+$('restaurantReviews').innerHTML=reviews.length?reviews.map(v=>'<article class="item"><strong>'+('⭐'.repeat(v.rating))+'</strong><p>'+safe(v.message||'Avaliação sem recado')+'</p><small class="muted">'+new Date(v.created_at).toLocaleDateString('pt-BR')+'</small></article>').join(''):'<p class="muted">As avaliações dos clientes aparecerão aqui.</p>';
 }catch(err){notice(err.message,true)}}
-$('welcomeForm').onsubmit=async e=>{e.preventDefault();if(!restaurantId)return;try{const value=String(new FormData(e.target).get('welcome')||'').trim();if(!value||value.length>180)throw Error('Escreva um recadinho de até 180 caracteres.');await call(supabase.from('restaurants').update({welcome_message:value}).eq('id',restaurantId));await loadShop();notice('Recadinho salvo! 💌')}catch(err){notice(err.message,true)}};
+$('welcomeForm').onsubmit=async e=>{e.preventDefault();if(!restaurantId)return;try{const value=String(new FormData(e.target).get('welcome')||'').trim();if(!value||value.length>180)throw Error('Escreva um recadinho de até 180 caracteres.');await call(supabase.from('restaurants').update({welcome_message:value}).eq('id',restaurantId));await loadShop();notice('Mensagem atualizada!')}catch(err){notice(err.message,true)}};
 $('categoryForm').onsubmit=async e=>{e.preventDefault();try{await call(supabase.from('categories').insert({restaurant_id:restaurantId,name:new FormData(e.target).get('name')}));e.target.reset();await loadManage();notice('Categoria criada!')}catch(err){notice(err.message,true)}};
 $('productForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);try{await call(supabase.from('products').insert({restaurant_id:restaurantId,category_id:f.get('category'),name:f.get('name'),description:f.get('description'),price_cents:Math.round(Number(f.get('price'))*100)}));e.target.reset();await loadManage();await loadShop();notice('Produto publicado!')}catch(err){notice(err.message,true)}};
 $('ownOrders').onchange=async e=>{const id=e.target.dataset.order;if(!id)return;try{await call(supabase.rpc('advance_order',{p_order:id,p_status:e.target.value}));await loadManage();await loadHistory();notice('Pedido atualizado!')}catch(err){notice(err.message,true)}};
 async function loadShop(){try{restaurants=await call(supabase.from('restaurants').select('id,name,slug,welcome_message').eq('active',true).order('name'));const current=$('shopRestaurant').value;$('shopRestaurant').innerHTML='<option value="">Selecione um restaurante</option>'+restaurants.map(r=>'<option value="'+safe(r.id)+'">'+safe(r.name)+'</option>').join('');if(restaurants.some(r=>r.id===current))$('shopRestaurant').value=current;await loadProducts()}catch(err){notice(err.message,true)}}
 $('shopRestaurant').onchange=()=>{cart={};onlyFavorites=false;loadProducts()};
 $('showAllProducts').onclick=()=>{onlyFavorites=false;renderShopProducts()};
-$('showFavorites').onclick=()=>{if(!session){notice('Entre na sua conta para salvar e ver seus queridinhos. 💗',true);return}onlyFavorites=true;renderShopProducts()};
+$('showFavorites').onclick=()=>{if(!session){notice('Entre na sua conta para salvar seus favoritos.',true);return}onlyFavorites=true;renderShopProducts()};
 async function loadFavorites(){
  favoriteIds=new Set();
  if(!session||!products.length)return;
@@ -38,7 +50,7 @@ function renderShopProducts(){
  $('shopWelcome').textContent=selected?'💌 '+(selected.welcome_message||'Feito com carinho, especialmente para você! 💛'):'';
  show('shopWelcome',!!selected);
  const list=onlyFavorites?products.filter(p=>favoriteIds.has(p.id)):products;
- $('shopProducts').innerHTML=list.length?list.map(p=>'<article class="item"><h3>🍔 '+safe(p.name)+'</h3><p>'+safe(p.description)+'</p><b>'+money(p.price_cents)+'</b><div class="row" style="margin-top:12px"><button class="action" data-add="'+safe(p.id)+'">Adicionar +</button><button class="heart '+(favoriteIds.has(p.id)?'saved':'')+'" data-favorite="'+safe(p.id)+'" aria-label="'+(favoriteIds.has(p.id)?'Remover dos favoritos':'Salvar nos favoritos')+'">'+(favoriteIds.has(p.id)?'💖 Salvo':'🤍 Favoritar')+'</button></div></article>').join(''):'<p class="muted">'+(onlyFavorites?'Seus queridinhos vão aparecer aqui! 💗':'Selecione um restaurante com produtos disponíveis.')+'</p>';
+ $('shopProducts').innerHTML=list.length?list.map(p=>'<article class="item"><h3>🍔 '+safe(p.name)+'</h3><p>'+safe(p.description)+'</p><b>'+money(p.price_cents)+'</b><div class="row" style="margin-top:12px"><button class="action" data-add="'+safe(p.id)+'">Adicionar +</button><button class="heart '+(favoriteIds.has(p.id)?'saved':'')+'" data-favorite="'+safe(p.id)+'" aria-label="'+(favoriteIds.has(p.id)?'Remover dos favoritos':'Salvar nos favoritos')+'">'+(favoriteIds.has(p.id)?'★ Salvo':'☆ Favoritar')+'</button></div></article>').join(''):'<p class="muted">'+(onlyFavorites?'Seus produtos favoritos vão aparecer aqui.':'Selecione um restaurante com produtos disponíveis.')+'</p>';
  drawCart();
 }
 async function loadProducts(){
@@ -51,7 +63,7 @@ async function loadProducts(){
 }
 $('shopProducts').onclick=e=>{const b=e.target.closest('[data-add]');if(b){const id=b.dataset.add;cart[id]=(cart[id]||0)+1;drawCart();return}const heart=e.target.closest('[data-favorite]');if(heart)toggleFavorite(heart.dataset.favorite)};
 async function toggleFavorite(id){
- if(!session){notice('Faça login para guardar seus queridinhos. 💗',true);return}
+ if(!session){notice('Faça login para guardar seus favoritos.',true);return}
  if(!products.some(p=>p.id===id))return;
  try{
   if(favoriteIds.has(id)){
@@ -92,12 +104,12 @@ $('orderHistory').onclick=async e=>{
   if(input===null)return;
   const rating=Number(input);
   if(!Number.isInteger(rating)||rating<1||rating>5)throw Error('Escolha uma nota de 1 a 5.');
-  const message=prompt('Deixe um recadinho carinhoso (opcional, até 500 caracteres):');
+  const message=prompt('Deixe seu comentário (opcional, até 500 caracteres):');
   if(message===null)return;
   if(message.length>500)throw Error('O recadinho deve ter até 500 caracteres.');
   await call(supabase.from('order_reviews').insert({order_id:orderId,restaurant_id:order.restaurant_id,customer_id:session.user.id,rating,message:message.trim()}));
   await loadHistory();
-  notice('Avaliação enviada! Obrigado pelo carinho 💖');
+  notice('Avaliação enviada com sucesso!');
  }catch(err){notice(err.message,true)}
 };
 $('refreshHistory').onclick=loadHistory;
