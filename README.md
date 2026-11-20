@@ -40,3 +40,23 @@ Projeto Supabase: `PedeON-by-GATEON`. Tabelas: `restaurants`, `restaurant_member
 ## Tecnologias
 
 HTML, CSS, JavaScript, Supabase JS 2.x, Supabase Auth, PostgreSQL e Row Level Security.
+
+
+## Módulos ON — estágio de implementação
+
+| Módulo | Estado atual |
+|---|---|
+| ON Rewards | Pontos simbólicos calculados a partir de pedidos entregues; sem resgate |
+| ON Levels | Bronze/Silver/Gold/Black calculados por pontos; sem benefícios automáticos |
+| ON Reviews | Avaliações após entrega, armazenadas no Supabase |
+| ON Deals | CRUD inicial de códigos de campanha; **não aplica descontos no checkout** |
+| ON Pulse | Resumo dos últimos 60 pedidos do restaurante |
+| ON Flow | Alteração de status com validação no banco |
+| ON Stock | Cadastro e atualização manual de insumos com alertas de estoque baixo |
+| ON Dispatch | Vinculação manual de entregador a pedido de entrega; sem rastreamento GPS |
+| ON Smart | Modelos de resposta copiáveis; **não é IA nem WhatsApp integrado** |
+| ON Insights | Taxa de entrega calculada nos últimos 60 pedidos; não é DRE |
+| ON QR | Link compartilhável de cardápio por slug; imagem QR e pedidos de mesa pendentes |
+| ON Control | Superadmin multiempresa ainda não implementado |
+
+**Antes de colocar em produção:** testar autenticação, permissões RLS, pedidos, avaliações e módulos com contas reais; reconciliar migrações anteriores no repositório; configurar hospedagem, pagamentos e integração WhatsApp. A integração automática GitHub–Supabase não foi habilitada por estas alterações.
