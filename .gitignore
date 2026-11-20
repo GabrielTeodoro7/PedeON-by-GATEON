@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+**/target/
+**/node_modules/
+**/.next/.
+**/build/
+.idea/
+.vscode/
+
+# Archivos locais e do SoS
+.DS.Store
+Thumbs.db
