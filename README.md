@@ -60,3 +60,8 @@ HTML, CSS, JavaScript, Supabase JS 2.x, Supabase Auth, PostgreSQL e Row Level Se
 | ON Control | Superadmin multiempresa ainda não implementado |
 
 **Antes de colocar em produção:** testar autenticação, permissões RLS, pedidos, avaliações e módulos com contas reais; reconciliar migrações anteriores no repositório; configurar hospedagem, pagamentos e integração WhatsApp. A integração automática GitHub–Supabase não foi habilitada por estas alterações.
+
+
+## Testes automatizados
+
+Execute `node --test tests/*.test.mjs` com Node.js 22+ na raiz do repositório. O workflow `.github/workflows/smoke.yml` executa os smoke tests em push para `main` e pull requests. São testes estáticos de sintaxe e integração dos componentes; não substituem testes de navegador, autenticação real, RLS por usuário ou checkout de ponta a ponta.
