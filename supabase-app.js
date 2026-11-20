@@ -24,7 +24,7 @@ $('pulseMetrics').innerHTML=[
  ['Em andamento',active,'⚡'],
  ['Aguardando aceite',pending,'⏳'],
  ['Entregues',completed.length,'✅'],
- ['Receita dos entregues',money(revenue),'📈']
+ ['Valor entregue (últimos 60)',money(revenue),'📈']
 ].map(([label,value,emoji])=>'<article class="item"><span>'+emoji+' '+label+'</span><h3>'+value+'</h3></article>').join('');
 $('manageTitle').textContent='Gerenciar '+r.name;$('welcomeInput').value=r.welcome_message||'';$('productCategory').innerHTML=c.map(x=>'<option value="'+safe(x.id)+'">'+safe(x.name)+'</option>').join('');$('ownProducts').innerHTML=p.length?p.map(x=>'<div class="item"><b>'+safe(x.name)+'</b><p>'+money(x.price_cents)+'</p><span>'+ (x.available?'Disponível':'Indisponível')+'</span></div>').join(''):'<p>Nenhum produto cadastrado.</p>';$('ownOrders').innerHTML=o.length?'<table><thead><tr><th>Pedido</th><th>Cliente</th><th>Total</th><th>Status</th><th>Ação</th></tr></thead><tbody>'+o.map(x=>'<tr><td>'+safe(x.id.slice(0,8))+'</td><td>'+safe(x.customer_name)+'</td><td>'+money(x.total_cents)+'</td><td>'+safe(x.status)+'</td><td><select data-order="'+safe(x.id)+'">'+[x.status,...({pending:['accepted','cancelled'],accepted:['preparing','cancelled'],preparing:['ready','cancelled'],ready:['dispatched'],dispatched:['delivered']}[x.status]||[])].map(s=>'<option '+(x.status===s?'selected':'')+' value="'+s+'">'+s+'</option>').join('')+'</select></td></tr>').join('')+'</tbody></table>':'<p>Nenhum pedido recebido.</p>';
 const reviews=await call(supabase.from('order_reviews').select('rating,message,created_at').eq('restaurant_id',restaurantId).order('created_at',{ascending:false}).limit(30));
