@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GATEON | Planos PedeON</title><link rel="stylesheet" href="./styles.css">
+<style>body{margin:0;background:#fff8f3;font-family:system-ui,Arial,sans-serif;color:#24242a}main{max-width:1100px;margin:auto;padding:32px 18px}h1{font-size:clamp(2rem,5vw,3rem)}.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:16px}.plan{background:white;border:1px solid #eaded8;border-radius:18px;padding:24px;box-shadow:0 6px 20px #0000000a}.plan h2{font-size:1.25rem}.price{font-size:1.75rem;font-weight:800}.rate{font-size:1.2rem;color:#c44b2c;font-weight:700}.note{margin-top:20px;line-height:1.6;color:#52525b}a{color:#ad3828}button{min-height:44px} .status{margin:20px 0;color:#5d5550}</style></head>
+<body><main><p><a href="./painel.html">← Voltar ao PedeON</a></p><h1>Planos PedeON by GATEON</h1><p>Uma solução que cresce com o seu restaurante.</p>
+<div id="status" class="status" role="status">Carregando planos...</div><section class="plans" id="plans" aria-label="Planos de assinatura"></section>
+<p class="note">A mensalidade é cobrada por mês. A comissão incide sobre pedidos pagos online. Tarifas do processador, tributos e uso excedente de WhatsApp/IA não estão incluídos. A contratação e cobrança automática ainda não estão disponíveis.</p></main>
+<script type="module">
+import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.95.3';
+const supabase=createClient('https://lutemrmbswbcxiznfhny.supabase.co','sb_publishable_W9exzQqMEaTaHvhBKyQJKQ_rtA11Pe7');
+const money=n=>(n/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const safe=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+const order={start:0,pro:1,premium:2,enterprise:3};
+const {data,error}=await supabase.from('subscription_plans').select('code,name,monthly_cents,commission_bps,features').eq('active',true);
+document.getElementById('status').textContent=error?'Não foi possível carregar os planos. Tente novamente mais tarde.':'Planos disponíveis — contratação em preparação.';
+if(!error)document.getElementById('plans').innerHTML=data.sort((a,b)=>order[a.code]-order[b.code]).map(p=>'<article class="plan"><h2>'+safe(p.name)+'</h2><div class="price">'+money(p.monthly_cents)+' <small>/mês</small></div><p class="rate">'+(p.commission_bps/100).toLocaleString('pt-BR')+'% por pedido</p><p>'+Object.keys(p.features||{}).filter(k=>p.features[k]).length+' recursos incluídos</p><p>Contratação em breve</p></article>').join('');
+</script></body></html>
