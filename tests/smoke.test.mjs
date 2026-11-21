@@ -24,3 +24,11 @@ test('UI clearly labels incomplete external integrations',()=>{
  assert.match(html,/sem integra[cç][aã]o com WhatsApp/i);
  assert.match(html,/checkout ainda n[aã]o dispon[ií]vel/i);
 });
+
+test('pickup orders can complete without dispatch while delivery orders require dispatch',()=>{
+ assert.ok(js.includes("ready:x.fulfillment==='pickup'?['delivered']:['dispatched']"));
+});
+test('checkout still uses validated server RPC, not direct order inserts',()=>{
+ assert.ok(js.includes("supabase.rpc('place_order'"));
+ assert.ok(!js.includes("supabase.from('orders').insert("));
+});
