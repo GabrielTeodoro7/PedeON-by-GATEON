@@ -29,6 +29,7 @@ $('pulseMetrics').innerHTML=[
 ].map(([label,value,emoji])=>'<article class="item"><span>'+emoji+' '+label+'</span><h3>'+value+'</h3></article>').join('');
 $('manageTitle').textContent='Gerenciar '+r.name;$('welcomeInput').value=r.welcome_message||'';$('productCategory').innerHTML=c.map(x=>'<option value="'+safe(x.id)+'">'+safe(x.name)+'</option>').join('');$('ownProducts').innerHTML=p.length?p.map(x=>'<div class="item"><b>'+safe(x.name)+'</b><p>'+money(x.price_cents)+'</p><span>'+ (x.available?'Disponível':'Indisponível')+'</span></div>').join(''):'<p>Nenhum produto cadastrado.</p>';$('ownOrders').innerHTML=o.length?'<table><thead><tr><th>Pedido</th><th>Cliente</th><th>Total</th><th>Status</th><th>Ação</th></tr></thead><tbody>'+o.map(x=>'<tr><td>'+safe(x.id.slice(0,8))+'</td><td>'+safe(x.customer_name)+'</td><td>'+money(x.total_cents)+'</td><td>'+safe(x.status)+'</td><td><select data-order="'+safe(x.id)+'">'+[x.status,...({pending:['accepted','cancelled'],accepted:['preparing','cancelled'],preparing:['ready','cancelled'],ready:x.fulfillment==='pickup'?['delivered']:['dispatched'],dispatched:['delivered']}[x.status]||[])].map(s=>'<option '+(x.status===s?'selected':'')+' value="'+s+'">'+s+'</option>').join('')+'</select></td></tr>').join('')+'</tbody></table>':'<p>Nenhum pedido recebido.</p>';
 await loadOperations(o,r);
+await loadPlanAccess();
 const reviews=await call(supabase.from('order_reviews').select('rating,message,created_at').eq('restaurant_id',restaurantId).order('created_at',{ascending:false}).limit(30));
 $('restaurantReviews').innerHTML=reviews.length?reviews.map(v=>'<article class="item"><strong>'+('⭐'.repeat(v.rating))+'</strong><p>'+safe(v.message||'Avaliação sem recado')+'</p><small class="muted">'+new Date(v.created_at).toLocaleDateString('pt-BR')+'</small></article>').join(''):'<p class="muted">As avaliações dos clientes aparecerão aqui.</p>';
 }catch(err){notice(err.message,true)}}
@@ -44,6 +45,23 @@ $('smartTemplate').onchange=updateSmart;
 $('copySmart').onclick=async()=>{try{await navigator.clipboard.writeText($('smartText').value);notice('Mensagem copiada!')}catch(e){notice('Selecione e copie a mensagem manualmente.',true)}};
 $('copyMenuLink').onclick=async()=>{try{await navigator.clipboard.writeText($('menuLink').value);notice('Link copiado!')}catch(e){notice('Selecione e copie o link manualmente.',true)}};
 updateSmart();
+async function loadPlanAccess(){
+ const {data,error}=await supabase.rpc('restaurant_plan_summary',{p_restaurant:restaurantId});
+ const entitled=!error&&data?.entitled===true;
+ const features=entitled?(data.features||{}):{};
+ const gates=[['dealForm','promotions'],['stockForm','stock'],['dispatchForm','dispatch']];
+ for(const [id,feature] of gates){
+  const form=$(id);if(!form)continue;
+  const allowed=features[feature]===true;
+  for(const control of form.querySelectorAll('input,select,button,textarea'))control.disabled=!allowed;
+  form.title=allowed?'':'Recurso indisponível: requer assinatura ativa com '+feature;
+ }
+ for(const [id,feature] of [['dealsList','promotions'],['stockList','stock']]){
+  const root=$(id);if(!root)continue;
+  for(const button of root.querySelectorAll('button,input'))button.disabled=features[feature]!==true;
+ }
+ const dispatch=$('dispatchList');if(dispatch)dispatch.title=features.dispatch===true?'':'Requer plano Premium ou Enterprise ativo';
+}
 async function loadOperations(orders,restaurant){
  const [deals,stock,dispatch]=await Promise.all([
   call(supabase.from('promotions').select('id,code,discount_percent,active,expires_at').eq('restaurant_id',restaurantId).order('created_at',{ascending:false}).limit(50)),
