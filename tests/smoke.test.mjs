@@ -32,3 +32,11 @@ test('checkout still uses validated server RPC, not direct order inserts',()=>{
  assert.ok(js.includes("supabase.rpc('place_order'"));
  assert.ok(!js.includes("supabase.from('orders').insert("));
 });
+
+test('mobile viewport and responsive breakpoints are configured',()=>{
+ assert.match(html,/name="viewport"/);
+ assert.match(html,/@media\(max-width:768px\)/);
+ assert.match(html,/@media\(max-width:480px\)/);
+ assert.match(html,/overflow-x:auto/);
+ assert.match(html,/min-height:44px/);
+});
